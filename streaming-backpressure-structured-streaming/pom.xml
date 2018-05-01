@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.mkwhitacre.streaming</groupId>
+        <artifactId>streaming-backpressure-base-parent</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>streaming-backpressure-structured-streaming</artifactId>
+    <url>${cloud.site.url}</url>
+    <packaging>jar</packaging>
+
+    <properties>
+        <project.parent.base>..</project.parent.base>
+        <scala.major.version>2.11</scala.major.version>
+        <!-- Spark compiles against 2.6.7 and complains if it is higher-->
+        <jackson.version>2.6.7</jackson.version>
+        <common.kafka.version>1.0</common.kafka.version>
+        <scala.version>${scala.major.version}.1</scala.version>
+        <itest.zookeeper.port>32181</itest.zookeeper.port>
+        <itest.zookeeper.quorum>zookeeper:${itest.zookeeper.port}</itest.zookeeper.quorum>
+        <itest.kafka.port>29092</itest.kafka.port>
+        <itest.kafka.bootstrap>kafka:${itest.kafka.port}</itest.kafka.bootstrap>
+    </properties>
+
+    <distributionManagement>
+        <site>
+            <id>${cloud.site.id}</id>
+            <name>${cloud.site.name}</name>
+            <url>${cloud.site.deploy.url}</url>
+        </site>
+    </distributionManagement>
+
+    <dependencies>
+
+      <!--
+
+        <dependency>
+        <groupId>com.mkwhitacre.streaming</groupId>
+        <artifactId>streaming-backpressure-models</artifactId>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+      </dependency>
+      -->
+
+      <!-- Assume that these should be provided but unsure right now -->
+
+      <dependency>
+        <groupId>com.101tec</groupId>
+        <artifactId>zkclient</artifactId>
+        <scope>compile</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.scala-lang</groupId>
+        <artifactId>scala-library</artifactId>
+        <scope>compile</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.spark</groupId>
+        <artifactId>spark-catalyst_${scala.major.version}</artifactId>
+        <scope>provided</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.spark</groupId>
+        <artifactId>spark-sql_${scala.major.version}</artifactId>
+        <scope>provided</scope>
+      </dependency>
+        <!--
+
+
+      <dependency>
+        <groupId>org.apache.spark</groupId>
+        <artifactId>spark-core_${scala.major.version}</artifactId>
+        <scope>provided</scope>
+      </dependency>
+
+          <dependency>
+          <groupId>org.apache.spark</groupId>
+          <artifactId>spark-streaming_${scala.major.version}</artifactId>
+          <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+          <groupId>org.apache.spark</groupId>
+          <artifactId>spark-streaming-kafka-0-10_${scala.major.version}</artifactId>
+          <scope>runtime</scope>
+        </dependency>
+        -->
+      <dependency>
+        <groupId>org.apache.spark</groupId>
+        <artifactId>spark-sql-kafka-0-10_${scala.major.version}</artifactId>
+        <scope>runtime</scope>
+      </dependency>
+
+        <!--
+
+
+        <dependency>
+            <groupId>com.cerner.common.kafka</groupId>
+            <artifactId>common-kafka</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.cerner.common.kafka</groupId>
+            <artifactId>common-kafka-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <scope>test</scope>
+        </dependency>
+        -->
+
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka_${scala.major.version}</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    <build>
+        <testResources>
+            <testResource>
+                <directory>${project.basedir}/src/test/resources</directory>
+                <filtering>true</filtering>
+            </testResource>
+            <testResource>
+                <directory>${project.basedir}/src/it/resources</directory>
+                <filtering>true</filtering>
+            </testResource>
+        </testResources>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>add-test-sources</id>
+                        <phase>generate-test-sources</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.basedir}/src/it/java</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Override the matching for tests to use the Suite and cut down on spinup/teardown of Kafka-->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <forkCount>1</forkCount>
+                    <reuseForks>false</reuseForks>
+                    <argLine>-Xmx2048m -Djava.net.preferIPv4Stack=true</argLine>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>analyze</id>
+                        <goals>
+                            <goal>analyze-only</goal>
+                        </goals>
+                        <configuration combine.children="append">
+                            <ignoredUnusedDeclaredDependencies>
+                                <ignoredUnusedDeclaredDependency>org.apache.spark:spark-sql-kafka-0-10_${scala.major.version}:jar:${spark.version}</ignoredUnusedDeclaredDependency>
+                            </ignoredUnusedDeclaredDependencies>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>run-integration-tests</id>
+                        <goals>
+                            <goal>integration-test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*ITestcase.java</include>
+                            </includes>
+                            <argLine>-Xmx2048m -Djava.net.preferIPv4Stack=true</argLine>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>verify-integration-tests</id>
+                        <goals>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>start-docker</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>start</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>stop-docker</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <startParallel>true</startParallel>
+                    <images>
+                        <image>
+                            <alias>zookeeper</alias>
+                            <name>confluentinc/cp-zookeeper:4.0.0</name>
+                            <build>
+                                <skip>true</skip>
+                            </build>
+                            <run>
+                                <env>
+                                    <ZOOKEEPER_CLIENT_PORT>${itest.zookeeper.port}</ZOOKEEPER_CLIENT_PORT>
+                                    <ZOOKEEPER_TICK_TIME>2000</ZOOKEEPER_TICK_TIME>
+                                </env>
+                                <ports>
+                                    <port>${itest.zookeeper.port}:${itest.zookeeper.port}</port>
+                                </ports>
+                                <wait>
+                                    <log>INFO binding to port 0.0.0.0/0.0.0.0:${itest.zookeeper.port} \(org.apache.zookeeper.server.NIOServerCnxnFactory\)</log>
+                                    <time>60000</time>
+                                </wait>
+                            </run>
+                        </image>
+                        <image>
+                            <alias>kafka</alias>
+                            <name>confluentinc/cp-kafka:4.0.0</name>
+                            <build>
+                                <skip>true</skip>
+                            </build>
+                            <run>
+                                <hostname>localhost</hostname>
+                                <env>
+                                    <KAFKA_BROKER_ID>1</KAFKA_BROKER_ID>
+                                    <KAFKA_ZOOKEEPER_CONNECT>${itest.zookeeper.quorum}</KAFKA_ZOOKEEPER_CONNECT>
+                                    <KAFKA_ADVERTISED_LISTENERS>PLAINTEXT://localhost:${itest.kafka.port}</KAFKA_ADVERTISED_LISTENERS>
+                                    <KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR>1</KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR>
+                                </env>
+                                <ports>
+                                    <port>${itest.kafka.port}:${itest.kafka.port}</port>
+                                </ports>
+                                <links>
+                                    <link>zookeeper</link>
+                                </links>
+                                <wait>
+                                    <log> INFO \[KafkaServer id=1\] started \(kafka.server.KafkaServer\)</log>
+                                    <time>60000</time>
+                                </wait>
+                            </run>
+                        </image>
+                    </images>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
