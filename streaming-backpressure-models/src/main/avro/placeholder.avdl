@@ -1,0 +1,8 @@
+@namespace("com.mkwhitacre.streaming.backpressure")
+protocol PlaceholderProtocol {
+
+     record Holder{
+
+         long x;
+     }
+}

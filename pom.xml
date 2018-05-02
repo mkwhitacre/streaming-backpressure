@@ -325,7 +325,7 @@
         <artifactId>findbugs-maven-plugin</artifactId>
         <configuration>
           <effort>Max</effort>
-          <threshold>Low</threshold>
+          <!--<threshold>Low</threshold>-->
           <excludeFilterFile>${findbugs.excludes.location}</excludeFilterFile>
         </configuration>
         <executions>
