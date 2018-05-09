@@ -10,6 +10,7 @@
     <suppress checks="[a-zA-Z0-0]*" files="PlaceholderProtocol.java" />
     <suppress checks="[a-zA-Z0-0]*" files="Placeholder.java" />
     <suppress checks="[a-zA-Z0-0]*" files="Holder.java" />
+    <suppress checks="[a-zA-Z0-0]*" files="PlayerPiano.java" />
 
 
 </suppressions>

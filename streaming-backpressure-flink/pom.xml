@@ -16,6 +16,10 @@
         <project.parent.base>..</project.parent.base>
         <scala.major.version>2.11</scala.major.version>
         <scala.version>${scala.major.version}.1</scala.version>
+      <itest.zookeeper.port>32181</itest.zookeeper.port>
+      <itest.zookeeper.quorum>zookeeper:${itest.zookeeper.port}</itest.zookeeper.quorum>
+      <itest.kafka.port>29092</itest.kafka.port>
+      <itest.kafka.bootstrap>kafka:${itest.kafka.port}</itest.kafka.bootstrap>
     </properties>
 
     <distributionManagement>
@@ -56,8 +60,39 @@
         <groupId>org.apache.flink</groupId>
         <artifactId>flink-clients_${scala.major.version}</artifactId>
         <scope>provided</scope>
+    </dependency>
+      <dependency>
+        <groupId>org.apache.flink</groupId>
+        <artifactId>flink-streaming-java_${scala.major.version}</artifactId>
+        <version>${flink.version}</version>
       </dependency>
 
+
+    <dependency>
+      <groupId>org.apache.flink</groupId>
+      <artifactId>flink-connector-kafka-0.10_${scala.major.version}</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+
+      <dependency>
+        <groupId>org.apache.kafka</groupId>
+        <artifactId>kafka-clients</artifactId>
+        <scope>test</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.kafka</groupId>
+        <artifactId>kafka_${scala.major.version}</artifactId>
+        <scope>test</scope>
+      </dependency>
+
+
+      <dependency>
+        <groupId>com.101tec</groupId>
+        <artifactId>zkclient</artifactId>
+        <scope>compile</scope>
+      </dependency>
 
         <!--<dependency>
             <groupId>com.cerner.common.kafka</groupId>
@@ -88,6 +123,23 @@
         </dependency>
         -->
 
+      <dependency>
+        <groupId>log4j</groupId>
+        <artifactId>log4j</artifactId>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-log4j12</artifactId>
+        <scope>test</scope>
+      </dependency>
+
+
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -95,19 +147,67 @@
         </dependency>
     </dependencies>
     <build>
+        <testResources>
+          <testResource>
+            <directory>${project.basedir}/src/test/resources</directory>
+            <filtering>true</filtering>
+          </testResource>
+          <testResource>
+            <directory>${project.basedir}/src/it/resources</directory>
+            <filtering>true</filtering>
+          </testResource>
+        </testResources>
         <plugins>
             <!-- Override the matching for tests to use the Suite and cut down on spinup/teardown of Kafka-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <!--<includes>
-                        <include>**/ExampleSuite.java</include>
-                    </includes> -->
                     <forkCount>1</forkCount>
                     <reuseForks>false</reuseForks>
                     <argLine>-Xmx2048m -Djava.net.preferIPv4Stack=true</argLine>
                 </configuration>
+            </plugin>
+            <plugin>
+              <groupId>org.codehaus.mojo</groupId>
+              <artifactId>build-helper-maven-plugin</artifactId>
+              <executions>
+                <execution>
+                  <id>add-test-sources</id>
+                  <phase>generate-test-sources</phase>
+                  <goals>
+                    <goal>add-test-source</goal>
+                  </goals>
+                  <configuration>
+                    <sources>
+                      <source>${project.basedir}/src/it/java</source>
+                    </sources>
+                  </configuration>
+                </execution>
+              </executions>
+            </plugin>
+            <plugin>
+              <artifactId>maven-failsafe-plugin</artifactId>
+              <executions>
+                <execution>
+                  <id>run-integration-tests</id>
+                  <goals>
+                    <goal>integration-test</goal>
+                  </goals>
+                  <configuration>
+                    <includes>
+                      <include>**/*ITestcase.java</include>
+                    </includes>
+                    <argLine>-Xmx2048m -Djava.net.preferIPv4Stack=true</argLine>
+                  </configuration>
+                </execution>
+                <execution>
+                  <id>verify-integration-tests</id>
+                  <goals>
+                    <goal>verify</goal>
+                  </goals>
+                </execution>
+              </executions>
             </plugin>
             <plugin>
                 <artifactId>maven-dependency-plugin</artifactId>
@@ -125,6 +225,77 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+              <groupId>io.fabric8</groupId>
+              <artifactId>docker-maven-plugin</artifactId>
+              <executions>
+                <execution>
+                  <id>start-docker</id>
+                  <phase>pre-integration-test</phase>
+                  <goals>
+                    <goal>start</goal>
+                  </goals>
+                </execution>
+                <execution>
+                  <id>stop-docker</id>
+                  <phase>post-integration-test</phase>
+                  <goals>
+                    <goal>stop</goal>
+                  </goals>
+                </execution>
+              </executions>
+              <configuration>
+                <startParallel>true</startParallel>
+                <images>
+                  <image>
+                    <alias>zookeeper</alias>
+                    <name>confluentinc/cp-zookeeper:4.0.0</name>
+                    <build>
+                      <skip>true</skip>
+                    </build>
+                    <run>
+                      <env>
+                        <ZOOKEEPER_CLIENT_PORT>${itest.zookeeper.port}</ZOOKEEPER_CLIENT_PORT>
+                        <ZOOKEEPER_TICK_TIME>2000</ZOOKEEPER_TICK_TIME>
+                      </env>
+                      <ports>
+                        <port>${itest.zookeeper.port}:${itest.zookeeper.port}</port>
+                      </ports>
+                      <wait>
+                        <log>INFO binding to port 0.0.0.0/0.0.0.0:${itest.zookeeper.port} \(org.apache.zookeeper.server.NIOServerCnxnFactory\)</log>
+                        <time>60000</time>
+                      </wait>
+                    </run>
+                  </image>
+                  <image>
+                    <alias>kafka</alias>
+                    <name>confluentinc/cp-kafka:4.0.0</name>
+                    <build>
+                      <skip>true</skip>
+                    </build>
+                    <run>
+                      <hostname>localhost</hostname>
+                      <env>
+                        <KAFKA_BROKER_ID>1</KAFKA_BROKER_ID>
+                        <KAFKA_ZOOKEEPER_CONNECT>${itest.zookeeper.quorum}</KAFKA_ZOOKEEPER_CONNECT>
+                        <KAFKA_ADVERTISED_LISTENERS>PLAINTEXT://localhost:${itest.kafka.port}</KAFKA_ADVERTISED_LISTENERS>
+                        <KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR>1</KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR>
+                      </env>
+                      <ports>
+                        <port>${itest.kafka.port}:${itest.kafka.port}</port>
+                      </ports>
+                      <links>
+                        <link>zookeeper</link>
+                      </links>
+                      <wait>
+                        <log> INFO \[KafkaServer id=1\] started \(kafka.server.KafkaServer\)</log>
+                        <time>60000</time>
+                      </wait>
+                    </run>
+                  </image>
+                </images>
+              </configuration>
             </plugin>
         </plugins>
     </build>

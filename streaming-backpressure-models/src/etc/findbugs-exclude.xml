@@ -5,5 +5,12 @@
         <Class name="~com\.mkwhitacre\.streaming\.backpressure\.Holder"/>
     </Match>
 
+    <Match>
+        <Class name="~com\.mkwhitacre\.streaming\.backpressure\.PlayerPiano"/>
+    </Match>
+    <Match>
+        <Class name="~com\.mkwhitacre\.streaming\.backpressure\.PlayerPiano$1"/>
+    </Match>
+
 
 </FindBugsFilter>

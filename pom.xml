@@ -85,6 +85,11 @@
         <artifactId>flink-streaming-java_${scala.major.version}</artifactId>
         <version>${flink.version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.apache.flink</groupId>
+        <artifactId>flink-connector-kafka-0.10_${scala.major.version}</artifactId>
+        <version>${flink.version}</version>
+      </dependency>
 
       <dependency>
         <groupId>org.apache.spark</groupId>

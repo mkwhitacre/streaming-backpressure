@@ -41,7 +41,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class KafkaReadExampleITestcase {
+public class SparkKafkaReadExampleITestcase {
 
   public static final String BOOTSTRAP_SERVERS = "kafka.bootstrap";
   public static final String ZOOKEEPER_QUORUM = "zookeeper.quorum";
@@ -50,7 +50,7 @@ public class KafkaReadExampleITestcase {
   public void test() throws Exception {
 
     Properties props = new Properties();
-    props.load(KafkaReadExampleITestcase.class.getResourceAsStream("/itest.properties"));
+    props.load(SparkKafkaReadExampleITestcase.class.getResourceAsStream("/itest.properties"));
 
     String bootstrap = props.getProperty(BOOTSTRAP_SERVERS);
     String zkQuorum = props.getProperty(ZOOKEEPER_QUORUM);
