@@ -34,6 +34,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -56,39 +57,37 @@ public class FlinkKafkaReadExampleITestcase {
 
     createTopic(zkQuorum, bootstrap, topic);
 
-        java.util.concurrent.ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
+    ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 
 
-        WriteDataRunnable writeDataRunnable = new WriteDataRunnable(bootstrap, topic, 10);
+    WriteDataRunnable writeDataRunnable = new WriteDataRunnable(bootstrap, topic, 10);
 
-        //Schedule a runnable to be executed every 10 seconds at a fixed rate
-        // to just dump out some data.
-        final ScheduledFuture<?> scheduledFuture =
-            executorService.scheduleAtFixedRate(writeDataRunnable, 10, 10, TimeUnit.SECONDS);
+    //Schedule a runnable to be executed every 10 seconds at a fixed rate
+    // to just dump out some data.
+    final ScheduledFuture<?> scheduledFuture =
+        executorService.scheduleAtFixedRate(writeDataRunnable, 10, 10, TimeUnit.SECONDS);
 
-        //Let this example run for 60 seconds and then shut down.
-        ScheduledFuture<?> shutdownFuture = executorService.schedule((Runnable) () ->
-            scheduledFuture.cancel(true), 60, TimeUnit.SECONDS);
-//    int expected = writeData(bootstrap, topic, 0,1000);
+    //Let this example run for 60 seconds and then shut down.
+    ScheduledFuture<?> shutdownFuture = executorService.schedule((Runnable) () ->
+        scheduledFuture.cancel(true), 60, TimeUnit.SECONDS);
+    //    int expected = writeData(bootstrap, topic, 0,1000);
 
-
-
-      String[] args = new String[]{bootstrap, topic};
+    String[] args = new String[]{bootstrap, topic};
 
 
-//    readData(bootstrap, topic, expected);
+    //    readData(bootstrap, topic, expected);
 
-      try {
-        FlinkKafkaStreamingMain.main(args);
-        
-        shutdownFuture.get();
+    try {
+      FlinkKafkaStreamingMain.main(args);
 
-        System.out.println("Stopping....");
-        FlinkKafkaStreamingMain.stop();
+      shutdownFuture.get();
 
-      } finally {
-        executorService.shutdownNow();
-      }
+      System.out.println("Stopping....");
+      FlinkKafkaStreamingMain.stop();
+
+    } finally {
+      executorService.shutdownNow();
+    }
   }
 
   private static ZkUtils getZkUtils(Properties properties) {

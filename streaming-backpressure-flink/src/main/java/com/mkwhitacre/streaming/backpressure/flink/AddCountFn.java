@@ -5,7 +5,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
 
 public class AddCountFn implements MapFunction<String, Tuple2<String, Integer>> {
   @Override
-  public Tuple2<String, Integer> map(String s) throws Exception {
-    return new Tuple2<>(s, 1);
+  public Tuple2<String, Integer> map(String string) throws Exception {
+    return new Tuple2<>(string, 1);
   }
 }

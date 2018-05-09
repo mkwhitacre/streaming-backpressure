@@ -20,6 +20,7 @@
       <itest.zookeeper.quorum>zookeeper:${itest.zookeeper.port}</itest.zookeeper.quorum>
       <itest.kafka.port>29092</itest.kafka.port>
       <itest.kafka.bootstrap>kafka:${itest.kafka.port}</itest.kafka.bootstrap>
+      <skip.tests>true</skip.tests>
     </properties>
 
     <distributionManagement>
@@ -199,6 +200,7 @@
                       <include>**/*ITestcase.java</include>
                     </includes>
                     <argLine>-Xmx2048m -Djava.net.preferIPv4Stack=true</argLine>
+                    <skipITs>${skip.tests}</skipITs>
                   </configuration>
                 </execution>
                 <execution>

@@ -1,5 +1,7 @@
 package com.mkwhitacre.streaming.backpressure.flink;
 
+import static org.apache.flink.streaming.api.windowing.time.Time.seconds;
+
 import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -9,34 +11,27 @@ import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer010;
 
 import java.util.Properties;
 
-import static org.apache.flink.streaming.api.windowing.time.Time.seconds;
-
 public class FlinkKafkaStreamingMain {
 
   private static FlinkKafkaConsumer010<String> kafkaConsumer;
 
+  /**
+   * Mains.
+   * @param args args
+   * @throws Exception an exception
+   */
   public static void main(String[] args) throws Exception {
 
     String bootstrapServers = args[0];
     String topics = args[1];
 
-
-
-    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-
-
-
-
-
-
     Properties properties = new Properties();
     properties.setProperty("bootstrap.servers", bootstrapServers);
     properties.setProperty("group.id", "flinkTest");
 
-
-
     kafkaConsumer = new FlinkKafkaConsumer010<>(topics, new SimpleStringSchema(), properties);
 
+    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
     DataStream<Tuple2<String, Integer>> stream = env
         .addSource(kafkaConsumer)
@@ -45,10 +40,9 @@ public class FlinkKafkaStreamingMain {
         .timeWindow(seconds(5))
         .sum(1);
 
-
     stream.print();
 
-    JobExecutionResult result = env.execute("Window WordCount");
+    env.execute("Window WordCount");
   }
 
   public static void stop() throws Exception {
