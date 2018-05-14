@@ -20,7 +20,9 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import scala.Tuple2;
 import scala.collection.Iterator;
 
@@ -38,13 +40,20 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class SparkKafkaReadExampleITestcase {
 
+
+  @Rule
+  public TemporaryFolder tempFolder = new TemporaryFolder();
+
   public static final String BOOTSTRAP_SERVERS = "kafka.bootstrap";
   public static final String ZOOKEEPER_QUORUM = "zookeeper.quorum";
+
+  public static final AtomicBoolean SHUTDOWN = new AtomicBoolean(false);
 
   @Test
   public void test() throws Exception {
@@ -52,15 +61,19 @@ public class SparkKafkaReadExampleITestcase {
     Properties props = new Properties();
     props.load(SparkKafkaReadExampleITestcase.class.getResourceAsStream("/itest.properties"));
 
-    String bootstrap = props.getProperty(BOOTSTRAP_SERVERS);
-    String zkQuorum = props.getProperty(ZOOKEEPER_QUORUM);
-    String topic = "iamatopic";
+    final String bootstrap = props.getProperty(BOOTSTRAP_SERVERS);
+    final String zkQuorum = props.getProperty(ZOOKEEPER_QUORUM);
+    final String topic = "iamatopic";
+    final String outTopic = "iamoutTopic";
+    final String slowdown = Long.toString(-1L);
 
     createTopic(zkQuorum, bootstrap, topic);
+    createTopic(zkQuorum, bootstrap, outTopic);
 
-    ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
+    ScheduledExecutorService executorService = Executors.newScheduledThreadPool(5);
 
 
+    executorService.submit(new ReadDataRunnable(bootstrap, outTopic));
     WriteDataRunnable writeDataRunnable = new WriteDataRunnable(bootstrap, topic, 10);
 
     //Schedule a runnable to be executed every 10 seconds at a fixed rate
@@ -76,7 +89,8 @@ public class SparkKafkaReadExampleITestcase {
     //    int expected = writeData(bootstrap, topic);
 
 
-    String[] args = new String[]{bootstrap, topic};
+    String[] args = new String[]{bootstrap, topic, outTopic,
+        tempFolder.getRoot().getAbsolutePath(), slowdown};
 
 
     //    readData(bootstrap, topic, expected);
@@ -87,6 +101,9 @@ public class SparkKafkaReadExampleITestcase {
       shutdownFuture.get();
 
       StructuredStreamingMain.stop();
+      SHUTDOWN.set(true);
+
+      scheduledFuture.get();
     } finally {
       executorService.shutdownNow();
     }
@@ -111,6 +128,9 @@ public class SparkKafkaReadExampleITestcase {
 
   private static int writeData(String bootstrap, String topic,
                                int startingValue, int numToWrite) throws Exception {
+    if (SHUTDOWN.get()) {
+      return 0;
+    }
     Map<String, Object> configProps = new HashMap<>();
 
     configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrap);
@@ -166,6 +186,35 @@ public class SparkKafkaReadExampleITestcase {
       consumer.subscribe(Collections.singleton(topic));
       int read = 0;
       while (read < expectedCount) {
+        System.out.println("Polling data...");
+        ConsumerRecords<String, String> poll = consumer.poll(1000);
+        System.out.println("Polled data:" + poll.count());
+
+        read += poll.count();
+        poll.forEach(r -> System.out.println("Offset: "
+            + r.offset() +  " key:" + r.value() + " value:" + r.value()));
+      }
+    }
+  }
+
+  private static void readDataContinuously(String bootstrap, String topic) {
+    Map<String, Object> configProps = new HashMap<>();
+
+    configProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrap);
+    configProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+    configProps.put(ConsumerConfig.GROUP_ID_CONFIG, "imagroup");
+    configProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
+    configProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+        StringDeserializer.class.getName());
+    configProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+        StringDeserializer.class.getName());
+
+    System.out.println("Reading data...");
+
+    try (Consumer<String, String> consumer = new KafkaConsumer<>(configProps)) {
+      consumer.subscribe(Collections.singleton(topic));
+      int read = 0;
+      while (!SHUTDOWN.get()) {
         System.out.println("Polling data...");
         ConsumerRecords<String, String> poll = consumer.poll(1000);
         System.out.println("Polled data:" + poll.count());
@@ -244,6 +293,25 @@ public class SparkKafkaReadExampleITestcase {
       } catch (Exception e) {
         e.printStackTrace();
       }
+    }
+  }
+
+  /**
+   * Runnable class that just writes data into Kafka.
+   */
+  private static class ReadDataRunnable implements Runnable {
+
+    private final String topic;
+    private final String bootstrap;
+
+    public ReadDataRunnable(String bootstrap, String topic) {
+      this.topic = topic;
+      this.bootstrap = bootstrap;
+    }
+
+    @Override
+    public void run() {
+      readDataContinuously(bootstrap, topic);
     }
   }
 
